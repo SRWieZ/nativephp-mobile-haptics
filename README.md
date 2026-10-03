@@ -31,6 +31,7 @@ use BlessedZulu\NativePHP\Mobile\Haptics\Facades\Haptics;
 
 // Impact feedback - for button taps, collisions, UI emphasis
 Haptics::impact('light');    // light, medium (default), heavy, rigid, soft
+Haptics::impact('light', times: 3, intervalMs: 40);  // three distinct taps, 40 ms apart
 
 // Notification feedback - for async operation results
 Haptics::notification('success');  // success (default), warning, error

@@ -27,8 +27,8 @@ async function call(fn, params = {}) {
     return response.ok;
 }
 
-export async function impact(style = 'medium') {
-    return call('Haptics.Impact', { style });
+export async function impact(style = 'medium', times = 1, interval = 50) {
+    return call('Haptics.Impact', times > 1 ? { style, times, interval } : { style });
 }
 
 export async function notification(type = 'success') {

@@ -14,16 +14,29 @@ class Haptics
 
     private const MAX_DURATION_MS = 5000;
 
+    private const MAX_IMPACT_REPEATS = 100;
+
+    private const MIN_IMPACT_INTERVAL_MS = 15;
+
     /**
-     * Trigger an impact haptic feedback.
+     * Trigger an impact haptic feedback, optionally repeated: `$times`
+     * impacts `$intervalMs` apart, scheduled natively so they stay distinct
+     * (impacts fired in the same instant merge into one).
      */
-    public function impact(string $style = 'medium'): bool
+    public function impact(string $style = 'medium', int $times = 1, int $intervalMs = 50): bool
     {
         if (! in_array($style, self::IMPACT_STYLES, true)) {
             $style = 'medium';
         }
 
-        return $this->call('Haptics.Impact', ['style' => $style]);
+        $params = ['style' => $style];
+
+        if ($times > 1) {
+            $params['times'] = min(self::MAX_IMPACT_REPEATS, $times);
+            $params['interval'] = max(self::MIN_IMPACT_INTERVAL_MS, min(self::MAX_DURATION_MS, $intervalMs));
+        }
+
+        return $this->call('Haptics.Impact', $params);
     }
 
     /**

@@ -28,10 +28,21 @@ enum HapticsFunctions {
                 }
             }()
 
+            // Optional repeat: `times` impacts `interval` ms apart, so a burst
+            // stays a series of distinct taps instead of merging into one.
+            let times = max(1, min(100, parameters["times"] as? Int ?? 1))
+            let interval = Double(max(15, parameters["interval"] as? Int ?? 50)) / 1000.0
+
             DispatchQueue.main.async {
                 let generator = UIImpactFeedbackGenerator(style: feedbackStyle)
                 generator.prepare()
                 generator.impactOccurred()
+
+                for i in 1..<times {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + interval * Double(i)) {
+                        generator.impactOccurred()
+                    }
+                }
             }
 
             return ["success": true]

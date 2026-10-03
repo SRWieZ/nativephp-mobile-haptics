@@ -42,7 +42,20 @@ object HapticsFunctions {
                 else -> 30L to 128 // medium
             }
 
-            vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+            // Optional repeat: one waveform of `times` pulses, `interval` ms
+            // apart (start to start). Separate vibrate() calls would cancel
+            // each other, so a burst has to be a single effect.
+            val times = ((parameters["times"] as? Number)?.toInt() ?: 1).coerceIn(1, 100)
+            val interval = ((parameters["interval"] as? Number)?.toLong() ?: 50L).coerceAtLeast(15L)
+
+            if (times == 1) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+            } else {
+                val pulse = duration.coerceAtMost(interval - 5)
+                val timings = LongArray(times * 2) { i -> if (i % 2 == 0) (if (i == 0) 0L else interval - pulse) else pulse }
+                val amplitudes = IntArray(times * 2) { i -> if (i % 2 == 0) 0 else amplitude }
+                vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+            }
             return mapOf("success" to true)
         }
     }
