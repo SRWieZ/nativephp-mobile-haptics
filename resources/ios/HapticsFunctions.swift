@@ -33,14 +33,15 @@ enum HapticsFunctions {
             let times = max(1, min(100, parameters["times"] as? Int ?? 1))
             let interval = Double(max(15, parameters["interval"] as? Int ?? 50)) / 1000.0
 
-            DispatchQueue.main.async {
-                let generator = UIImpactFeedbackGenerator(style: feedbackStyle)
-                generator.prepare()
+            onMain {
+                let generator = ImpactGenerators.generator(for: feedbackStyle)
                 generator.impactOccurred()
+                generator.prepare()
 
                 for i in 1..<times {
                     DispatchQueue.main.asyncAfter(deadline: .now() + interval * Double(i)) {
                         generator.impactOccurred()
+                        generator.prepare()
                     }
                 }
             }
@@ -152,5 +153,36 @@ enum HapticsFunctions {
 
             return ["success": true]
         }
+    }
+}
+
+
+/// One long-lived impact generator per style. A generator created, fired
+/// and released on every call (dozens of times a second while a counter
+/// repeats) can drop impacts: Apple's guidance is to keep the generator
+/// and prepare it again after each impact so the Taptic Engine stays ready.
+@MainActor
+private enum ImpactGenerators {
+    private static var generators: [UIImpactFeedbackGenerator.FeedbackStyle: UIImpactFeedbackGenerator] = [:]
+
+    static func generator(for style: UIImpactFeedbackGenerator.FeedbackStyle) -> UIImpactFeedbackGenerator {
+        if let generator = generators[style] {
+            return generator
+        }
+
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generators[style] = generator
+
+        return generator
+    }
+}
+
+/// Run on the main thread now when already there, else as soon as possible.
+private func onMain(_ work: @escaping @MainActor () -> Void) {
+    if Thread.isMainThread {
+        MainActor.assumeIsolated { work() }
+    } else {
+        DispatchQueue.main.async { work() }
     }
 }
