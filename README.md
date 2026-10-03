@@ -14,7 +14,7 @@ Haptic feedback plugin for [NativePHP Mobile](https://nativephp.com) - impact, n
 
 - PHP 8.2+
 - Laravel 11, 12 or 13
-- NativePHP Mobile 3.0+
+- NativePHP Mobile 4.x
 
 ## Installation
 
@@ -22,7 +22,15 @@ Haptic feedback plugin for [NativePHP Mobile](https://nativephp.com) - impact, n
 composer require blessedzulu/nativephp-mobile-haptics
 ```
 
-The service provider and facade are auto-discovered.
+The service provider and facade are auto-discovered. NativePHP Mobile 4 also needs the plugin registered, so its native code is compiled into the app:
+
+```bash
+php artisan vendor:publish --tag=nativephp-plugins-provider   # once per app
+php artisan native:plugin:register blessedzulu/nativephp-mobile-haptics
+php artisan native:plugin:list                                 # check it is listed
+```
+
+Then rebuild the app (`php artisan native:run`): the Swift and Kotlin sources only compile in at build time.
 
 ## Usage (PHP)
 
@@ -47,7 +55,37 @@ Haptics::pattern([100, 50, 200, 50, 100]);
 
 All methods return `bool` - `true` on success, `false` on failure or missing hardware.
 
+### In native screens (v4)
+
+Fire haptics from a `NativeComponent` action, never from `render()` (a render can run more than once per interaction):
+
+```php
+use BlessedZulu\NativePHP\Mobile\Haptics\Facades\Haptics;
+use Native\Mobile\Edge\NativeComponent;
+
+class Counter extends NativeComponent
+{
+    public int $count = 0;
+
+    public function increment(): void
+    {
+        $this->count++;
+        Haptics::impact('light');
+    }
+}
+```
+
+The calls go through `nativephp_call()`, so the v4 test harness records them:
+
+```php
+Native::test(Counter::class)
+    ->call('increment')
+    ->assertNativeCalled('Haptics.Impact', fn (array $params) => $params['style'] === 'light');
+```
+
 ## Usage (JavaScript)
+
+Only for screens that still run in a web view; native (EDGE) screens use the PHP facade.
 
 ```js
 import { haptics } from '@blessedzulu/nativephp-mobile-haptics';
